@@ -1,8 +1,4 @@
-torch>=2.1.0
 transformers>=4.40.0
-huggingface_hub>=0.34.0,<1.0
-gradio==4.44.1
-numpy
 sentencepiece
 protobuf
-audioop-lts 
+numpy
