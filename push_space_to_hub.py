@@ -1,6 +1,6 @@
 import os
 import tempfile
-from huggingface_hub import HfApi, create_repo, login
+from huggingface_hub import HfApi
 
 HF_USERNAME = "Shitanshu06"
 SPACE_REPO_ID = f"{HF_USERNAME}/smart-mcq-solver"
@@ -22,23 +22,16 @@ license: apache-2.0
 Fine-tuned DeBERTa-v3-base for 5-option MCQ answering.
 """
 
-REQUIREMENTS = """torch>=2.1.0
+REQUIREMENTS = """torch
 transformers>=4.40.0
-huggingface_hub>=0.34.0,<1.0
-gradio>=5.0.0
-numpy
 sentencepiece
 protobuf
-audioop-lts
+numpy
 """
 
 
 def main():
-    token = os.environ.get("HF_TOKEN") or input("HF Token: ").strip()
-    login(token=token)
-
     api = HfApi()
-    create_repo(SPACE_REPO_ID, repo_type="space", space_sdk="gradio", exist_ok=True, private=False)
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as tf:
         tf.write(SPACE_README)
@@ -48,14 +41,18 @@ def main():
         tf.write(REQUIREMENTS)
         req_tmp = tf.name
 
+    print(f"Uploading files to Hugging Face Space: {SPACE_REPO_ID}...")
     api.upload_file(path_or_fileobj="app.py", path_in_repo="app.py", repo_id=SPACE_REPO_ID, repo_type="space")
+    api.upload_file(path_or_fileobj="inference.py", path_in_repo="inference.py", repo_id=SPACE_REPO_ID, repo_type="space")
     api.upload_file(path_or_fileobj=readme_tmp, path_in_repo="README.md", repo_id=SPACE_REPO_ID, repo_type="space")
     api.upload_file(path_or_fileobj=req_tmp, path_in_repo="requirements.txt", repo_id=SPACE_REPO_ID, repo_type="space")
 
     os.unlink(readme_tmp)
     os.unlink(req_tmp)
 
-    print(f"Space updated: https://huggingface.co/spaces/{SPACE_REPO_ID}")
+    print("Restarting Space...")
+    api.restart_space(repo_id=SPACE_REPO_ID)
+    print(f"Space updated successfully: https://huggingface.co/spaces/{SPACE_REPO_ID}")
 
 
 if __name__ == "__main__":
