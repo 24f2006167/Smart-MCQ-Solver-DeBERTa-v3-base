@@ -391,17 +391,59 @@ with gr.Blocks(
     </div>
     """)
 
+    # ── Examples ──────────────────────────────────────────────────────────────
+    gr.Examples(
+        examples=[
+            [
+                "Which organelle is responsible for producing energy in the form of ATP through cellular respiration?",
+                "Nucleus",
+                "Ribosome",
+                "Mitochondria",
+                "Golgi apparatus",
+                "Endoplasmic reticulum",
+            ],
+            [
+                "Which element has the highest electronegativity on the Pauling scale?",
+                "Oxygen",
+                "Chlorine",
+                "Nitrogen",
+                "Fluorine",
+                "Bromine",
+            ],
+            [
+                "Which data structure follows the Last-In-First-Out (LIFO) principle?",
+                "Queue",
+                "Linked List",
+                "Stack",
+                "Binary Tree",
+                "Hash Table",
+            ],
+            [
+                "Which city serves as the capital of Australia?",
+                "Sydney",
+                "Melbourne",
+                "Brisbane",
+                "Canberra",
+                "Perth",
+            ],
+            [
+                "What is the derivative of sin(x) with respect to x?",
+                "-sin(x)",
+                "cos(x)",
+                "-cos(x)",
+                "tan(x)",
+                "sec²(x)",
+            ],
+        ],
+        inputs=[prompt_input, opt_a, opt_b, opt_c, opt_d, opt_e],
+        label="💡 Click on any Example Question below to load & test directly:",
+    )
+
     # ── Event wiring ──────────────────────────────────────────────────────────
     predict_btn.click(
         fn=predict,
         inputs=[prompt_input, opt_a, opt_b, opt_c, opt_d, opt_e],
         outputs=[prediction_out, top3_out, prob_out],
-    )
-
-    example_gallery.click(
-        fn=load_example,
-        inputs=[examples_state],
-        outputs=[prompt_input, opt_a, opt_b, opt_c, opt_d, opt_e],
     )
 
 if __name__ == "__main__":
