@@ -1,84 +1,41 @@
+import numpy as np
 import torch
-import torch.nn.functional as F
+from transformers import AutoTokenizer, AutoModelForMultipleChoice
 
-from transformers import (
-    AutoTokenizer,
-    AutoModelForMultipleChoice
-)
-
-DEVICE = torch.device(
-    "cuda" if torch.cuda.is_available() else "cpu"
-)
-
-MODEL_PATH = "deberta_v3_best"
-
-LABELS = ["A", "B", "C", "D", "E"]
-
-print("Loading model...")
-
-tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-
-model = AutoModelForMultipleChoice.from_pretrained(
-    MODEL_PATH
-)
-
-model.to(DEVICE)
-model.eval()
-
-print("Model loaded successfully.")
+HF_MODEL_REPO = "Shitanshu06/mcq-deberta-v3-best-v2"
+OPTION_COLUMNS = ["A", "B", "C", "D", "E"]
+MAX_LENGTH = 192
 
 
-@torch.no_grad()
-def predict(question, option_a, option_b, option_c, option_d, option_e):
+class MCQSolver:
+    def __init__(self, model_dir=HF_MODEL_REPO, device=None):
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_dir)
+        self.model = AutoModelForMultipleChoice.from_pretrained(model_dir)
+        self.model.to(self.device)
+        self.model.eval()
 
-    choices = [
-        option_a,
-        option_b,
-        option_c,
-        option_d,
-        option_e
-    ]
+    @torch.no_grad()
+    def predict(self, prompt: str, options: list):
+        assert len(options) == len(OPTION_COLUMNS), f"Expected {len(OPTION_COLUMNS)} options"
 
-    encoding = tokenizer(
+        encoded = self.tokenizer(
+            [prompt] * len(options),
+            options,
+            truncation=True,
+            padding="max_length",
+            max_length=MAX_LENGTH,
+            return_tensors="pt",
+        )
+        inputs = {k: v.unsqueeze(0).to(self.device) for k, v in encoded.items()}
+        logits = self.model(**inputs).logits
+        probs = torch.softmax(logits, dim=1).cpu().numpy()[0]
 
-        [question] * 5,
+        ranked_idx = np.argsort(probs)[::-1]
+        ranked_labels = [OPTION_COLUMNS[i] for i in ranked_idx]
 
-        choices,
-
-        truncation=True,
-
-        padding="max_length",
-
-        max_length=256,
-
-        return_tensors="pt"
-
-    )
-
-    inputs = {}
-
-    for key, value in encoding.items():
-        inputs[key] = value.unsqueeze(0).to(DEVICE)
-
-    outputs = model(**inputs)
-
-    probabilities = F.softmax(
-        outputs.logits,
-        dim=1
-    ).cpu().numpy()[0]
-
-    ranking = probabilities.argsort()[::-1]
-
-    top3 = []
-
-    for idx in ranking[:3]:
-
-        top3.append({
-
-            "Option": LABELS[idx],
-
-            "Confidence": float(probabilities[idx])
-
-        })
-
-    return top3
+        return {
+            "top3": ranked_labels[:3],
+            "prediction": ranked_labels[0],
+            "probabilities": {OPTION_COLUMNS[i]: float(probs[i]) for i in range(len(options))},
+        }
